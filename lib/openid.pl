@@ -7,7 +7,7 @@
 
 use strict;
 
-use NCSUaklib;
+use NCSUaklib qw(krb5_login krb5_destroy);
 use SysNews::UserInfo;
 use URI::Escape;
 
