@@ -1,0 +1,57 @@
+#!/usr/bin/perl
+#
+# expire_associations
+# Copyright (C) 2009
+# Packetizer, Inc.
+#
+# This script will remove expired OpenID associations from the database.
+#
+
+use strict;
+
+require "config.pl";
+require "database.pl";
+
+#
+# MAIN
+#
+{
+    my ($sth,
+        $serial,
+        $delete_time);
+
+    # Connect to the database
+    if (!DatabaseConnect())
+    {
+        die "Unable to connect to the database\n";
+    }
+
+    # Build SQL statement to get expired associations
+    $sth = $main::dbh->prepare("SELECT serial FROM openid_assoc WHERE timestamp <= ?");
+    if (!$sth)
+    {
+        DatabaseDisconnect();
+        die "Unable to prepare SQL statement";
+    }
+
+    # Determine the timeframe for expirations
+    $delete_time = time() - $main::assoc_expiration -
+                   $main::assoc_expiration_grace;
+
+    # Select expired associations
+    if (!$sth->execute($delete_time))
+    {
+        DatabaseDisconnect();
+        die "Unable to execute SQL statement";
+    }
+
+    # Remove expired associations
+    while (($serial) = $sth->fetchrow_array)
+    {
+        $main::dbh->do("DELETE FROM openid_sigs WHERE assoc_handle = $serial");
+        $main::dbh->do("DELETE FROM openid_assoc WHERE serial = $serial");
+    }
+
+    # Disconnect from the database
+    DatabaseDisconnect();
+}

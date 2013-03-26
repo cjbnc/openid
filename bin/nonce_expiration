@@ -1,0 +1,46 @@
+#!/usr/bin/perl
+#
+# nonce_expiration
+# Copyright (C) 2009
+# Packetizer, Inc.
+#
+# This program will perform remove stale nonce values from the nonce table.
+#
+
+use strict;
+
+require "config.pl";
+require "database.pl";
+
+# Expiration time for nonce values
+$main::expire_time = 600;
+
+#
+# MAIN
+#
+{
+    my ($current_time,
+        $delete_time);
+
+    if (!DatabaseConnect())
+    {
+        print "ERROR: Unable to connect to the database";
+        exit 1;
+    }
+
+    # What is the current time?
+    $current_time = time();
+
+    # We should delete nonces older than 10 minutes
+    $delete_time = $current_time - $main::expire_time;
+
+    # Delete all old nonce values
+    if (!$main::dbh->do("DELETE FROM nonce WHERE timestamp < $delete_time"))
+    {
+        print "ERROR: Delete attempt failed";
+        exit 1;
+    }
+
+    # Disconnect from the database
+    DatabaseDisconnect();
+}

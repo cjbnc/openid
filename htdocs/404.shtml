@@ -1,0 +1,31 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+               "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html>
+
+<!-- Document Heading -->
+<head>
+<title>404 Document Not Found</title>
+<meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+<meta http-equiv="Content-Language" content="en-US"/>
+<link rel="SHORTCUT ICON" href="/favicon.ico"/>
+</head>
+
+<!-- Document body -->
+<body>
+
+<h1>404 Document Not Found</h1>
+
+<p>
+We're sorry, but the document you were looking for (<!--#echo var="REQUEST_URI" -->) could not be found on the server.
+</p>
+
+<p>
+Please <a href="http://www.example.com/contact.html">report</a> any broken
+links to ensure that other visitors do not encounter problems accessing the
+web site. 
+</p>
+
+</body>
+
+</html>
