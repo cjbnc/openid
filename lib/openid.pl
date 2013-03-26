@@ -7,6 +7,7 @@
 
 use strict;
 
+use NCSUaklib;
 use SysNews::UserInfo;
 use URI::Escape;
 
@@ -189,12 +190,14 @@ sub VerifySignature
 }
 
 #
-# ValidPassword
+# ValidSHAPassword
 #
 # This routine will validate the user's password, returning the serial
 # number of the associated user record, or 0 if the password is invalid.
 #
-sub ValidPassword
+# This function is replaced by our NCSU version.
+#
+sub ValidSHAPassword
 {
     my ($username, $password) = @_;
 
@@ -208,6 +211,40 @@ sub ValidPassword
     $sth = $main::dbh->prepare("SELECT serial FROM openid_users WHERE username = ? AND password = ?");
     if (($sth) &&
         ($sth->execute($username, $password)))
+    {
+        if ($sth->rows == 1)
+        {
+            ($serial) = $sth->fetchrow_array;
+            if ($serial > 0)
+            {
+                return $serial;
+            }
+        }
+    }
+
+    return 0;
+}
+
+sub ValidPassword
+{
+    my ($username, $password) = @_;
+
+    my ($sth,
+        $serial);
+
+    # Check the userid and password via NCSUaklib
+    my $error = krb5_login( $username, $password );
+    krb5_destroy();
+
+    if ($error ne 'OK')
+    {
+        return 0;
+    }
+
+    # Try to find a matching row
+    $sth = $main::dbh->prepare("SELECT serial FROM openid_users WHERE username = ?");
+    if (($sth) &&
+        ($sth->execute($username)))
     {
         if ($sth->rows == 1)
         {
