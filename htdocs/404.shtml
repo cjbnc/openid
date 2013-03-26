@@ -20,11 +20,13 @@
 We're sorry, but the document you were looking for (<!--#echo var="REQUEST_URI" -->) could not be found on the server.
 </p>
 
+<!--
 <p>
 Please <a href="http://www.example.com/contact.html">report</a> any broken
 links to ensure that other visitors do not encounter problems accessing the
 web site. 
 </p>
+-->
 
 </body>
 

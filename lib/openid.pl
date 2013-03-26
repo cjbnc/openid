@@ -7,6 +7,7 @@
 
 use strict;
 
+use SysNews::UserInfo;
 use URI::Escape;
 
 #
@@ -424,9 +425,39 @@ sub GetUser
 
     if (!$sth->execute($username) || ($sth->rows != 1))
     {
-        return (404, "", "");
+        # Finish the failed SQL statement
+        $sth->finish;
+
+        # if the user does not exist, try to import them from UserInfo
+        my $ui = SysNews::UserInfo->new($username);
+        if (!defined $ui->{username}) 
+        {
+            return (404, "", "");
+        }
+
+        $username = $ui->{username};
+        $name = $ui->{fullname};
+        $homepage = undef;
+        my $pass = 'ncsu';
+
+        $sth = $main::dbh->prepare("INSERT INTO openid_users (username, password, name, homepage) VALUES (?, ?, ?, ?)");
+        if (!$sth)
+        {
+            return (500, "", "");
+        }
+
+        if (!$sth->execute($username, $pass, $name, $homepage))
+        {
+            return (500, "", "");
+        }
+
+        # Finish the SQL statement
+        $sth->finish;
+
+        return (200, $name, $homepage);
     }
 
+    # user does exist, process normally
     ($name, $homepage) = $sth->fetchrow_array;
 
     # Finish the SQL statement
