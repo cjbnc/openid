@@ -7,12 +7,15 @@
 
 use strict;
 
-use NCSUaklib qw(krb5_login krb5_destroy);
-use SysNews::UserInfo;
 use HTML::Entities qw(decode_entities encode_entities);
 use URI;
 use URI::Escape;
 use URI::QueryParam;
+use Sys::Hostname;
+
+# NCSU-specific libs
+use NCSUaklib qw(krb5_login krb5_destroy);
+use SysNews::UserInfo;
 
 #
 # CreateAssociation
@@ -498,4 +501,51 @@ sub ShowNotFoundPage {
     close(TEMPLATE);
 }
 
+#
+# LogEvent
+# usage: 
+#  LogEvent( user => 'unityid', event => 'keyword', details => 'blah blah' );
+#
+sub LogEvent {
+    my (%data) = (@_);
+
+    # timestamp
+    my @lt = localtime();
+    my $filedate = sprintf "%04d%02d%02d", $lt[5] + 1900, $lt[4] + 1, $lt[3];
+    $data{date} = sprintf "%4d-%02d-%02d %02d:%02d:%02d", $lt[5] + 1900,
+        $lt[4] + 1, @lt[ 3, 2, 1, 0 ];
+
+    # remote IP should be in the env
+    $data{ip} = $ENV{'REMOTE_ADDR'};
+
+    # short server name
+    $data{host} = hostname();
+    $data{host} =~ s{\..*\z}{};
+
+    # default values
+    foreach my $key (qw( user event details)) {
+        $data{$key} = '-' if (!$data{$key});
+    }
+
+    # log to database, quietly skip on failures
+    my $sth
+        = $main::dbh->prepare(
+              "INSERT INTO openid_logs (date, host, ip, user, event, details "
+            . "VALUES (?, ?, ?, ?, ?, ?)" );
+    if ($sth) {
+        $sth->execute(
+            $data{date}, $data{host}, $data{ip},
+            $data{user}, $data{event}, $data{details},
+        );
+        $sth->finish;
+    }
+
+    # also log to flat file
+    my $filepath = $main::openid_log_dir . '/openid_log.' . $filedate;
+    if (open(my $out, '>>', $filepath)) {
+        printf $out qq{[%s] %s %s "%s" "%s"\n}, 
+            $data{date}, $data{ip}, $data{user}, $data{event}, $data{details};
+        close($out);
+    }
+}
 1;
