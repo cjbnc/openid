@@ -436,7 +436,7 @@ sub MakeHTMLSafe
     my ($text_line) = @_;
 
     # calls HTML::Entities
-    $$text_line = encode_entities( $$text_line );
+    encode_entities( $$text_line );
 }
 
 #
