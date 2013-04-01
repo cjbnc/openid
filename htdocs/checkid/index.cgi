@@ -108,6 +108,14 @@ sub CancelRequest {
     $location->query_param( 'openid.ns'   => $main::openid_ns );
     $location->query_param( 'openid.mode' => 'cancel' );
 
+    my $logurl = $location->clone;
+    $logurl->query_form( {} );
+    LogEvent(
+        'user'    => $request{identity},
+        'event'   => 'cancel',
+        'details' => $logurl->as_string
+    );
+
     print "Location: $location\r\n";
     print "\r\n";
 }
@@ -126,6 +134,14 @@ sub LogoffRequest {
     DeleteUserKey(%request);
 
     $location = URI->new( $request{'return_to'} );
+
+    my $logurl = $location->clone;
+    $logurl->query_form( {} );
+    LogEvent(
+        'user'    => $request{identity},
+        'event'   => 'logoff',
+        'details' => $logurl->as_string
+    );
 
     # Invalidate the user's credentials to prevent login, setting the
     # expiration date of the cookies so that they will be removed
@@ -172,7 +188,7 @@ sub LogoffRequest {
         #     http://specs.openid.net/auth/2.0/identifier_select
         #     unityid2
         # so just clean out all unexpected chars
-        $request{ $var } =~ s{[^\w\-.:/]}{}ig;
+        $request{$var} =~ s{[^\w\-.:/]}{}ig;
     }
 
     # Grab the OpenID secure cookie
@@ -223,6 +239,16 @@ sub LogoffRequest {
         )
         )
     {
+
+        # log the event
+        my $logurl = URI->new( $request{'return_to'} );
+        $logurl->query_form( {} );
+        LogEntry(
+            'user'    => $request{'identity'},
+            'event'   => 'login-fail',
+            'details' => $logurl->as_string,
+        );
+
         if ( $request{'mode'} eq "checkid_immediate" ) {
             SignalSetupNeeded(%request);
         }
@@ -261,6 +287,15 @@ sub LogoffRequest {
                 %request );
         }
         else {
+
+            # log the event
+            my $logurl = URI->new( $request{'return_to'} );
+            $logurl->query_form( {} );
+            LogEntry(
+                'user'    => $request{'identity'},
+                'event'   => 'login-ok',
+                'details' => $logurl->as_string,
+            );
 
             #
             # Return a positive assertion

@@ -368,6 +368,15 @@ sub RecognizedUser {
         ( $serial, $user_key ) = $sth->fetchrow_array;
         $sth->finish;
         if ( $request{"openid_user_key"} eq $user_key ) {
+
+            # log the event
+            my $logurl = URI->new( $request{'return_to'} );
+            $logurl->query_form( {} );
+            LogEntry(
+                'user'    => $request{'identity'},
+                'event'   => 'login-cookie',
+                'details' => $logurl->as_string,
+            );
             return 1;
         }
     }
@@ -503,7 +512,7 @@ sub ShowNotFoundPage {
 
 #
 # LogEvent
-# usage: 
+# usage:
 #  LogEvent( user => 'unityid', event => 'keyword', details => 'blah blah' );
 #
 sub LogEvent {
@@ -524,7 +533,7 @@ sub LogEvent {
 
     # default values
     foreach my $key (qw( user event details)) {
-        $data{$key} = '-' if (!$data{$key});
+        $data{$key} = '-' if ( !$data{$key} );
     }
 
     # log to database, quietly skip on failures
@@ -534,7 +543,7 @@ sub LogEvent {
             . "VALUES (?, ?, ?, ?, ?, ?)" );
     if ($sth) {
         $sth->execute(
-            $data{date}, $data{host}, $data{ip},
+            $data{date}, $data{host},  $data{ip},
             $data{user}, $data{event}, $data{details},
         );
         $sth->finish;
@@ -542,8 +551,8 @@ sub LogEvent {
 
     # also log to flat file
     my $filepath = $main::openid_log_dir . '/openid_log.' . $filedate;
-    if (open(my $out, '>>', $filepath)) {
-        printf $out qq{[%s] %s %s "%s" "%s"\n}, 
+    if ( open( my $out, '>>', $filepath ) ) {
+        printf $out qq{[%s] %s %s "%s" "%s"\n},
             $data{date}, $data{ip}, $data{user}, $data{event}, $data{details};
         close($out);
     }
