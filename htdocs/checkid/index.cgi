@@ -13,7 +13,8 @@
 use strict;
 
 use CGI;
-use URI::Escape;
+use URI;
+use URI::QueryParam;
 use Digest::SHA qw( sha1_hex hmac_sha256 hmac_sha1 );
 use Crypt::DH;
 use Crypt::Random qw( makerandom_octet );
@@ -38,32 +39,22 @@ sub ForceCheckIDSetup
 
     my ($location);
 
-    $location = $main::op_endpoint;
-    if ($location =~ /\?/)
-    {
-        $location .= "&";
-    }
-    else
-    {
-        $location .= "?";
-    }
-
-    $location .= "openid.ns=" . uri_escape($main::openid_ns);
-    $location .= "&openid.mode=checkid_setup";
-    $location .= "&openid.return_to=" . uri_escape($request{'return_to'});
-    $location .= "&openid.identity=" . uri_escape($main::openid_url_prefix . $request{'identity'});
-    $location .= "&openid.claimed_id=" . uri_escape($main::openid_url_prefix . $request{'identity'});
-
-    $location .= "&openid.assoc_handle=" . uri_escape($request{'assoc_handle'});
+    $location = URI->new($main::op_endpoint);
+    $location->query_param( 'openid.ns' => $main::openid_ns) ;
+    $location->query_param( 'openid.mode' => 'checkid_setup' );
+    $location->query_param( 'openid.return_to' => $request{'return_to'} );
+    $location->query_param( 'openid.identity' => $main::openid_url_prefix . $request{'identity'} );
+    $location->query_param( 'openid.claimed_id' => $main::openid_url_prefix . $request{'identity'} );
+    $location->query_param( 'openid.assoc_handle' => $request{'assoc_handle'} );
     if ($request{'ns'} eq $main::openid_ns_1_1)
     {
-        $location .= "&openid.trust_root=" . uri_escape($request{'realm'});
+        $location->query_param( 'openid.trust_root' => $request{'realm'} );
     }
     else
     {
-        $location .= "&openid.realm=" . uri_escape($request{'realm'});
+        $location->query_param( 'openid.realm' => $request{'realm'} );
     }
-    $location .= "&packetizer.message=" . uri_escape("Incorrect password.");
+    $location->query_param( 'packetizer.message' => "Invalid credentials." );
 
     # Invalidate the user's credentials since they apparently did not validate
     # and specify an expiration date for the cookies so that they will be
@@ -94,20 +85,11 @@ sub ReturnNegativeResponse
         $contact,
         $location);
 
-    $openid_ns = uri_escape($main::openid_ns);
-    $contact = uri_escape($main::contact);
-    $error_string = uri_escape($error_string);
-
-    if ($request{'return_to'} =~ /\?/)
-    {
-        $location = $request{'return_to'} . "&";
-    }
-    else
-    {
-        $location = $request{'return_to'} . "?";
-    }
-    $location .= "openid.ns=$openid_ns&openid.mode=error" .
-                 "&openid.error=$error_string&openid.contact=$contact";
+    $location = URI->new( $request{'return_to'} );
+    $location->query_param( 'openid.ns' => $main::openid_ns );
+    $location->query_param( 'openid.mode' => 'error' );
+    $location->query_param( 'openid.error' => $error_string );
+    $location->query_param( 'openid.contact' => $main::contact );
 
     print "Location: $location\r\n";
     print "\r\n";
@@ -127,17 +109,9 @@ sub CancelRequest
         $contact,
         $location);
 
-    $openid_ns = uri_escape($main::openid_ns);
-
-    if ($request{'return_to'} =~ /\?/)
-    {
-        $location = $request{'return_to'} . "&";
-    }
-    else
-    {
-        $location = $request{'return_to'} . "?";
-    }
-    $location .= "openid.ns=$openid_ns&openid.mode=cancel";
+    $location = URI->new( $request{'return_to'} );
+    $location->query_param( 'openid.ns' => $main::openid_ns );
+    $location->query_param( 'openid.mode' => 'cancel' );
 
     print "Location: $location\r\n";
     print "\r\n";
@@ -157,7 +131,7 @@ sub LogoffRequest
 
     DeleteUserKey(%request);
 
-    $location = $request{'return_to'};
+    $location = URI->new( $request{'return_to'} );
 
     # Invalidate the user's credentials to prevent login, setting the
     # expiration date of the cookies so that they will be removed
@@ -186,7 +160,6 @@ sub LogoffRequest
         $nonce,
         $current_time,
         $invalidate_handle,
-        $url_reply,
         $assoc_type,
         $to_be_sig,
         $signature,
@@ -297,38 +270,37 @@ sub LogoffRequest
             #
             # Return a positive assertion
             #
-            $url_reply = "";
+            $location = URI->new( $request{'return_to'} );
             $to_be_sig = "";
 
-            $url_reply .= "openid.ns=" . uri_escape($main::openid_ns);
-
-            $url_reply .= "&openid.mode=id_res";
+            $location->query_param( 'openid.ns' => $main::openid_ns );
+            $location->query_param( 'openid.mode' => 'id_res' );
 
             # The 1.1 spec did not define op_endpoint, so do not use it
             if ($request{'ns'} ne $main::openid_ns_1_1)
             {
-                $url_reply .= "&openid.op_endpoint=" . uri_escape($main::op_endpoint);
+                $location->query_param( 'openid.op_endpoint' => $main::op_endpoint );
                 $to_be_sig .= "op_endpoint:$main::op_endpoint\n";
             }
 
-            $url_reply .= "&openid.identity=" . uri_escape($main::openid_url_prefix . $request{'identity'});
+            $location->query_param( 'openid.identity' => $main::openid_url_prefix . $request{'identity'} );
             $to_be_sig .= "identity:$main::openid_url_prefix" . $request{'identity'} . "\n";
 
-            $url_reply .= "&openid.claimed_id=" . uri_escape($main::openid_url_prefix . $request{'identity'});
+            $location->query_param( 'openid.claimed_id' => $main::openid_url_prefix . $request{'identity'} );
             $to_be_sig .= "claimed_id:$main::openid_url_prefix" . $request{'identity'} . "\n";
 
-            $url_reply .= "&openid.return_to=" . uri_escape($request{'return_to'});
+            $location->query_param( 'openid.return_to' => $request{'return_to'} );
             $to_be_sig .= "return_to:" . $request{'return_to'} . "\n";
 
-            $url_reply .= "&openid.assoc_handle=" . uri_escape($request{'assoc_handle'});
+            $location->query_param( 'openid.assoc_handle' => $request{'assoc_handle'} );
             $to_be_sig .= "assoc_handle:" . $request{'assoc_handle'} . "\n";
 
-            $url_reply .= "&openid.response_nonce=" . uri_escape($nonce);
+            $location->query_param( 'openid.response_nonce' => $nonce );
             $to_be_sig .= "response_nonce:$nonce\n";
 
             if (length($invalidate_handle) > 0)
             {
-                $url_reply .= "&openid.invalidate_handle=" . uri_escape($invalidate_handle);
+                $location->query_param( 'openid.invalidate_handle' => $invalidate_handle );
             }
 
             # Sign elements of the message
@@ -353,9 +325,9 @@ sub LogoffRequest
                 $signed = "identity,claimed_id,return_to,assoc_handle,response_nonce";
             }
 
-            $url_reply .= "&openid.signed=" . uri_escape($signed);
+            $location->query_param( 'openid.signed' => $signed );
 
-            $url_reply .= "&openid.sig=" . uri_escape($signature);
+            $location->query_param( 'openid.sig' => $signature );
 
             RecordSignature($request{'assoc_handle'},
                             $nonce,
@@ -363,15 +335,6 @@ sub LogoffRequest
                             $signature,
                             "$main::openid_url_prefix" . $request{'identity'},
                             $request{'realm'});
-
-            if ($request{'return_to'} =~ /\?/)
-            {
-                $location = $request{'return_to'} . "&$url_reply";
-            }
-            else
-            {
-                $location = $request{'return_to'} . "?$url_reply";
-            }
 
             if (($request{'sticky'} eq "Y") &&
                 (length($main::openid_secure_cookie_domain) > 0) &&
