@@ -38,6 +38,16 @@ sub ProcessIdentityRequest {
     # do not expose private name info to the web
     $name = $username;
 
+    LogEvent(
+        'user'    => $username,
+        'event'   => 'userinfo',
+        'details' => (
+              $status == 200 ? '200 OK'
+            : $status == 404 ? '404 Not Found'
+            : "$status Error"
+        ),
+    );
+
     if ( $status == 404 ) {
         if ( length($main::openid_not_found_template) > 0 ) {
             ShowNotFoundPage($username);
