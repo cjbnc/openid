@@ -11,7 +11,8 @@
 use strict;
 
 use CGI;
-use URI::Escape;
+use URI;
+use URI::QueryParam;
 use MIME::Base64;
 use Digest::SHA qw( sha1 sha256 );
 use Crypt::DH;
@@ -212,23 +213,12 @@ sub ProduceErrorPage
 sub RedirectOnError
 {
     my ($error_string, %request) = @_;
-    my $location;
-    my $contact = uri_escape($main::contact);
-    my $openid_ns = uri_escape($main::openid_ns);
+    my $location = URI->new( $request{'return_to'} );
+    $location->query_param( 'openid.ns'      => $main::openid_ns );
+    $location->query_param( 'openid.mode'    => 'error' );
+    $location->query_param( 'openid.error'   => $error_string );
+    $location->query_param( 'openid.contact' => $main::contact );
 
-    $error_string = uri_escape($error_string);
-
-    # Are there parameters in the URL?
-    if ($request{'return_to'} =~ /\?/)
-    {
-        $location = $request{'return_to'} . "&";
-    }
-    else
-    {
-        $location = $request{'return_to'} . "?";
-    }
-
-    $location .= "openid.ns=$openid_ns&openid.mode=error&openid.error=$error_string&openid.contact=$contact";
     print "Location: $location\r\n";
     print "\r\n";
 }
@@ -474,23 +464,12 @@ sub HandleCheckIDSetup
     if ((length($request{'openid_user'}) > 0) &&
         (length($request{'packetizer.message'} == 0)))
     {
-        $location = $main::process_login;
-
-        # Are there parameters in the URL?
-        if ($location =~ /\?/)
-        {
-            $location .= "&";
-        }
-        else
-        {
-            $location .= "?";
-        }
-
-        $location .= "ns=" . uri_escape($request{'ns'});
-        $location .= "&identity=" . uri_escape($identity);
-        $location .= "&assoc_handle=" . uri_escape($request{'assoc_handle'});
-        $location .= "&realm=" . uri_escape($request{'realm'});
-        $location .= "&return_to=" . uri_escape($request{'return_to'});
+        $location = URI->new($main::process_login);
+        $location->query_param( 'ns'           => $request{'ns'} );
+        $location->query_param( 'identity'     => $identity );
+        $location->query_param( 'assoc_handle' => $request{'assoc_handle'} );
+        $location->query_param( 'realm'        => $request{'realm'} );
+        $location->query_param( 'return_to'    => $request{'return_to'} );
 
         print "Location: $location\r\n";
         print "\r\n";
@@ -545,24 +524,13 @@ sub HandleCheckIDImmediate
         return;
     }
 
-    $location = $main::process_login;
-
-    # Are there parameters in the URL?
-    if ($location =~ /\?/)
-    {
-        $location .= "&";
-    }
-    else
-    {
-        $location .= "?";
-    }
-
-    $location .= "ns=" . uri_escape($request{'ns'});
-    $location .= "&identity=" . uri_escape($identity);
-    $location .= "&assoc_handle=" . uri_escape($request{'assoc_handle'});
-    $location .= "&realm=" . uri_escape($request{'realm'});
-    $location .= "&return_to=" . uri_escape($request{'return_to'});
-    $location .= "&mode=checkid_immediate";
+    $location = URI->new($main::process_login);
+    $location->query_param( 'ns'           => $request{'ns'} );
+    $location->query_param( 'identity'     => $identity );
+    $location->query_param( 'assoc_handle' => $request{'assoc_handle'} );
+    $location->query_param( 'realm'        => $request{'realm'} );
+    $location->query_param( 'return_to'    => $request{'return_to'} );
+    $location->query_param( 'mode'         => 'checkid_immediate' );
 
     print "Location: $location\r\n";
     print "\r\n";
