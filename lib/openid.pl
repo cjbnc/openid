@@ -367,17 +367,25 @@ sub RecognizedUser {
         $sth->execute( $request{'identity'}, $current_time );
         ( $serial, $user_key ) = $sth->fetchrow_array;
         $sth->finish;
-        if ( $request{"openid_user_key"} eq $user_key ) {
 
-            # log the event
-            my $logurl = URI->new( $request{'return_to'} );
-            $logurl->query_form( {} );
-            LogEntry(
+        # need for logging
+        my $logurl = URI->new( $request{'return_to'} );
+        $logurl->query_form( {} );
+
+        if ( $request{"openid_user_key"} eq $user_key ) {
+            LogEvent(
                 'user'    => $request{'identity'},
-                'event'   => 'login-cookie',
+                'event'   => 'cookie-ok',
                 'details' => $logurl->as_string,
             );
             return 1;
+        }
+        else {
+            LogEvent(
+                'user'    => $request{'identity'},
+                'event'   => 'cookie-fail',
+                'details' => $logurl->as_string,
+            );
         }
     }
 
@@ -539,7 +547,7 @@ sub LogEvent {
     # log to database, quietly skip on failures
     my $sth
         = $main::dbh->prepare(
-              "INSERT INTO openid_logs (date, host, ip, user, event, details "
+              "INSERT INTO openid_logs (date, host, ip, user, event, details) "
             . "VALUES (?, ?, ?, ?, ?, ?)" );
     if ($sth) {
         $sth->execute(

@@ -243,7 +243,7 @@ sub LogoffRequest {
         # log the event
         my $logurl = URI->new( $request{'return_to'} );
         $logurl->query_form( {} );
-        LogEntry(
+        LogEvent(
             'user'    => $request{'identity'},
             'event'   => 'login-fail',
             'details' => $logurl->as_string,
@@ -291,7 +291,7 @@ sub LogoffRequest {
             # log the event
             my $logurl = URI->new( $request{'return_to'} );
             $logurl->query_form( {} );
-            LogEntry(
+            LogEvent(
                 'user'    => $request{'identity'},
                 'event'   => 'login-ok',
                 'details' => $logurl->as_string,
