@@ -22,48 +22,40 @@ require "openid.pl";
 #
 # This routine will process the request to retrieve the identity document.
 #
-sub ProcessIdentityRequest
-{
-    my ($username, $logoff) = @_;
+sub ProcessIdentityRequest {
+    my ( $username, $logoff ) = @_;
 
-    my ($name,
-        $homepage,
-        $status,
-        $identity,
-        $return_to);
+    my ( $name, $homepage, $status, $identity, $return_to );
 
-    ($status, $name, $homepage) = GetUser($username);
+    ( $status, $name, $homepage ) = GetUser($username);
 
     # do not expose invalid usernames to the web
-    if ($status == 404 && length($username) > 2)
-    {
-        $status = 200;
+    if ( $status == 404 && length($username) > 2 ) {
+        $status   = 200;
         $homepage = "";
     }
 
     # do not expose private name info to the web
     $name = $username;
 
-    if ($status == 404)
-    {
-        if (length($main::openid_not_found_template) > 0)
-        {
+    if ( $status == 404 ) {
+        if ( length($main::openid_not_found_template) > 0 ) {
             ShowNotFoundPage($username);
         }
-        else
-        {
+        else {
             print "Status: 404 Not Found\r\n";
             print "\r\n";
         }
     }
-    elsif ($status == 500)
-    {
+    elsif ( $status == 500 ) {
         print "Status: 500 Internal Server Error\r\n";
         print "\r\n";
     }
-    else
-    {
-        if (!open(TEMPLATE, "<:encoding(UTF-8)", "$main::openid_identity_template"))
+    else {
+        if (!open( TEMPLATE, "<:encoding(UTF-8)",
+                "$main::openid_identity_template"
+            )
+            )
         {
             print "Status: 500 Internal Server Error\r\n";
             print "\r\n";
@@ -71,8 +63,7 @@ sub ProcessIdentityRequest
         }
 
         # If the user's actual name is not provided, just use the user ID
-        if (length($name) == 0)
-        {
+        if ( length($name) == 0 ) {
             $name = $username;
         }
 
@@ -80,25 +71,23 @@ sub ProcessIdentityRequest
         print "Content-Type: text/html; charset=UTF-8\r\n";
         print "\r\n";
 
-        while(<TEMPLATE>)
-        {
-            if (/CONTENT_TAG/)
-            {
+        while (<TEMPLATE>) {
+            if (/CONTENT_TAG/) {
+
                 # We will display the user's homepage (if provided), but
                 # could show any content in this area.
-                if (length($homepage) > 0)
-                {
-                    print "<p>Homepage: <a href=\"$homepage\">$homepage</a></p>\n";
+                if ( length($homepage) > 0 ) {
+                    print
+                        "<p>Homepage: <a href=\"$homepage\">$homepage</a></p>\n";
                 }
 
-                # If requested to allow the user to log off, produce a form accordingly
-                if ($logoff)
-                {
-                    $identity = $username;
+       # If requested to allow the user to log off, produce a form accordingly
+                if ($logoff) {
+                    $identity  = $username;
                     $return_to = $main::openid_url_prefix . $identity;
 
-                    MakeHTMLSafe(\$identity);
-                    MakeHTMLSafe(\$return_to);
+                    MakeHTMLSafe( \$identity );
+                    MakeHTMLSafe( \$return_to );
 
                     print << "HEREDOC";
 <form name="openid_form" method="post" action="$main::process_login">
@@ -109,8 +98,7 @@ sub ProcessIdentityRequest
 HEREDOC
                 }
             }
-            else
-            {
+            else {
                 s/OPENID_NAME/$name/g;
                 s/OPENID_ID/$username/g;
                 s/OPENID_SITE_NAME/$main::openid_site_name/g;
@@ -128,31 +116,30 @@ HEREDOC
 # MAIN
 #
 {
-    my ($username,
-        $openid_user,
-        $query);
+    my ( $username, $openid_user, $query );
 
     $query = new CGI;
 
-    $username = $query->param('username');
+    $username    = $query->param('username');
     $openid_user = $query->cookie('openid_user');
 
     # untaint username before using it
     $username =~ s{[^\w\-]}{}g;
-    $username = substr($username,0,20) if (length($username) > 20);
+    $username = substr( $username, 0, 20 ) if ( length($username) > 20 );
 
     # untaint openid_user before using it
     $openid_user =~ s{[^\w\-]}{}g;
-    $openid_user = substr($openid_user,0,20) if (length($openid_user) > 20);
+    $openid_user = substr( $openid_user, 0, 20 )
+        if ( length($openid_user) > 20 );
 
-    if (!DatabaseConnect())
-    {
+    if ( !DatabaseConnect() ) {
         die "Unable to connect to the database\n";
     }
 
     # Process the request
-    ProcessIdentityRequest($username, ($openid_user eq $username) ? 1 : 0);
-    
+    ProcessIdentityRequest( $username,
+        ( $openid_user eq $username ) ? 1 : 0 );
+
     # Disconnect from the database
     DatabaseDisconnect();
 }

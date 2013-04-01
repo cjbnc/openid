@@ -21,45 +21,36 @@ require "openid.pl";
 #
 # This routine will process the request to retrieve the identity document.
 #
-sub ProcessXRDSRequest
-{
+sub ProcessXRDSRequest {
     my ($username) = @_;
 
-    my ($name,
-        $homepage,
-        $status);
+    my ( $name, $homepage, $status );
 
-    ($status, $name, $homepage) = GetUser($username);
+    ( $status, $name, $homepage ) = GetUser($username);
 
     # do not expose invalid usernames to the web
-    if ($status == 404 && length($username) > 2)
-    {
-        $status = 200;
+    if ( $status == 404 && length($username) > 2 ) {
+        $status   = 200;
         $homepage = "";
     }
 
     # do not expose private name info to the web
     $name = $username;
 
-    if ($status == 404)
-    {
-        if (length($main::openid_not_found_template) > 0)
-        {
+    if ( $status == 404 ) {
+        if ( length($main::openid_not_found_template) > 0 ) {
             ShowNotFoundPage($username);
         }
-        else
-        {
+        else {
             print "Status: 404 Not Found\r\n";
             print "\r\n";
         }
     }
-    elsif ($status == 500)
-    {
+    elsif ( $status == 500 ) {
         print "Status: 500 Internal Server Error\r\n";
         print "\r\n";
     }
-    else
-    {
+    else {
         print "Content-Type: application/xrds+xml; charset=UTF-8\r\n";
         print "\r\n";
         print << "HERE_DOC";
@@ -91,8 +82,7 @@ HERE_DOC
 # MAIN
 #
 {
-    my ($username,
-        $query);
+    my ( $username, $query );
 
     $query = new CGI;
 
@@ -100,16 +90,15 @@ HERE_DOC
 
     # untaint username before using it
     $username =~ s{[^\w\-]}{}g;
-    $username = substr($username,0,20) if (length($username) > 20);
+    $username = substr( $username, 0, 20 ) if ( length($username) > 20 );
 
-    if (!DatabaseConnect())
-    {
+    if ( !DatabaseConnect() ) {
         die "Unable to connect to the database\n";
     }
 
     # Process the request
     ProcessXRDSRequest($username);
-    
+
     # Disconnect from the database
     DatabaseDisconnect();
 }

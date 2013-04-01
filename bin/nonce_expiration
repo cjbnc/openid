@@ -19,11 +19,9 @@ $main::expire_time = 600;
 # MAIN
 #
 {
-    my ($current_time,
-        $delete_time);
+    my ( $current_time, $delete_time );
 
-    if (!DatabaseConnect())
-    {
+    if ( !DatabaseConnect() ) {
         print "ERROR: Unable to connect to the database";
         exit 1;
     }
@@ -35,7 +33,7 @@ $main::expire_time = 600;
     $delete_time = $current_time - $main::expire_time;
 
     # Delete all old nonce values
-    if (!$main::dbh->do("DELETE FROM nonce WHERE timestamp < $delete_time"))
+    if ( !$main::dbh->do("DELETE FROM nonce WHERE timestamp < $delete_time") )
     {
         print "ERROR: Delete attempt failed";
         exit 1;

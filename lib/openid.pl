@@ -16,52 +16,51 @@ use URI::QueryParam;
 
 #
 # CreateAssociation
-# 
+#
 # This routine will create an association using the specified association
 # type.  It will return the association handle (or zero if an error)
 # along with the mac_key.  It is assumed that a database connection
 # is already established.
 #
-sub CreateAssociation
-{
-    my ($assoc_type,$session_type) = @_;
+sub CreateAssociation {
+    my ( $assoc_type, $session_type ) = @_;
 
-    my ($sth,
-        $mac_key,
-        $assoc_handle);
+    my ( $sth, $mac_key, $assoc_handle );
 
     # Generate a mac_key for this association
-    if ($assoc_type eq "HMAC-SHA256")
-    {
+    if ( $assoc_type eq "HMAC-SHA256" ) {
+
         # 256-bit random number (HMAC-SHA256)
-        $mac_key = makerandom_octet( Length=>32, Strength => 1);
+        $mac_key = makerandom_octet( Length => 32, Strength => 1 );
     }
-    else
-    {
+    else {
+
         # 160-bit random number (HMAC-SHA256)
-        $mac_key = makerandom_octet( Length=>20, Strength => 1);
+        $mac_key = makerandom_octet( Length => 20, Strength => 1 );
     }
 
-    $sth = $main::dbh->prepare("INSERT INTO openid_assoc(serial,assoc_type,session_type,mac_key,timestamp) VALUES (?,?,?,?,?)");
-    if (!$sth)
-    {
+    $sth
+        = $main::dbh->prepare(
+        "INSERT INTO openid_assoc(serial,assoc_type,session_type,mac_key,timestamp) VALUES (?,?,?,?,?)"
+        );
+    if ( !$sth ) {
 
-        return (0,undef);
+        return ( 0, undef );
     }
 
-    if (!$sth->execute( 0,
-                        $assoc_type,
-                        $session_type,
-                        encode_base64($mac_key,''),
-                        time()))
+    if (!$sth->execute(
+            0, $assoc_type, $session_type, encode_base64( $mac_key, '' ),
+            time()
+        )
+        )
     {
-        return (0, undef);
+        return ( 0, undef );
     }
 
     # Grab the serial row to use as the association handle
     $assoc_handle = $sth->{'mysql_insertid'};
 
-    return ($assoc_handle, $mac_key);
+    return ( $assoc_handle, $mac_key );
 }
 
 #
@@ -73,43 +72,39 @@ sub CreateAssociation
 # If the assoc_handle could not be found or has expired, then the routine
 # will return (0, undef, undef).
 #
-sub GetAssociation
-{
+sub GetAssociation {
     my ($assoc_handle) = @_;
 
-    my ($sth,
-        $assoc_type,
-        $mac_key,
-        $valid_time);
+    my ( $sth, $assoc_type, $mac_key, $valid_time );
 
-    $sth = $main::dbh->prepare("SELECT serial, assoc_type, mac_key FROM openid_assoc WHERE serial = ? AND timestamp > ?");
-    if (!$sth)
-    {
-        return (0, undef, undef);
+    $sth
+        = $main::dbh->prepare(
+        "SELECT serial, assoc_type, mac_key FROM openid_assoc WHERE serial = ? AND timestamp > ?"
+        );
+    if ( !$sth ) {
+        return ( 0, undef, undef );
     }
 
     # How long is an association valid?
-    $valid_time = time() - ($main::assoc_expiration +
-                            $main::assoc_expiration_grace);
+    $valid_time = time()
+        - ( $main::assoc_expiration + $main::assoc_expiration_grace );
 
-    if (!$sth->execute($assoc_handle,$valid_time))
-    {
-        return (0, undef, undef);
+    if ( !$sth->execute( $assoc_handle, $valid_time ) ) {
+        return ( 0, undef, undef );
     }
 
     # Prepare for the worst...
     $assoc_handle = 0;
-    $mac_key = undef;
+    $mac_key      = undef;
 
     # If there is a single row, fetch it
-    if ($sth->rows == 1)
-    {
-        ($assoc_handle, $assoc_type, $mac_key) = $sth->fetchrow_array;
+    if ( $sth->rows == 1 ) {
+        ( $assoc_handle, $assoc_type, $mac_key ) = $sth->fetchrow_array;
     }
 
     $sth->finish;
 
-    return ($assoc_handle, $assoc_type, decode_base64($mac_key));
+    return ( $assoc_handle, $assoc_type, decode_base64($mac_key) );
 }
 
 #
@@ -118,23 +113,23 @@ sub GetAssociation
 # This function will insert a row into the database to record a signature.
 # It returns 1 if successful and 0 if it fails.
 #
-sub RecordSignature
-{
-    my ($assoc_handle, $nonce, $signed, $signature, $identity, $realm) = @_;
+sub RecordSignature {
+    my ( $assoc_handle, $nonce, $signed, $signature, $identity, $realm ) = @_;
 
     my ($sth);
 
-    $sth = $main::dbh->prepare("INSERT INTO openid_sigs(serial, assoc_handle, nonce, signed, signature, identity, realm, timestamp, stat) values (?,?,?,?,?,?,?,?,'A')");
+    $sth
+        = $main::dbh->prepare(
+        "INSERT INTO openid_sigs(serial, assoc_handle, nonce, signed, signature, identity, realm, timestamp, stat) values (?,?,?,?,?,?,?,?,'A')"
+        );
 
-    if ((!$sth) ||
-        (!$sth->execute(0,
-                        $assoc_handle,
-                        $nonce,
-                        $signed,
-                        $signature,
-                        $identity,
-                        $realm,
-                        time())))
+    if (( !$sth )
+        || (!$sth->execute(
+                0,          $assoc_handle, $nonce, $signed,
+                $signature, $identity,     $realm, time()
+            )
+        )
+        )
     {
         return 0;
     }
@@ -144,7 +139,7 @@ sub RecordSignature
 
 #
 # VerifySignature
-# 
+#
 # This function will verify that a signature exists, matching all of the
 # parameters passed into this function.  Note it does not verify all
 # of the openid.* signature elements, since they may or may not
@@ -153,37 +148,36 @@ sub RecordSignature
 # specification says.  It returns 1 if the signature was verified and
 # 0 if it was not verified.
 #
-sub VerifySignature
-{
-    my ($assoc_handle, $nonce, $signed, $signature, $identity) = @_;
+sub VerifySignature {
+    my ( $assoc_handle, $nonce, $signed, $signature, $identity ) = @_;
 
-    my ($sth,
-        $serial,
-        $result);
+    my ( $sth, $serial, $result );
 
-    $sth = $main::dbh->prepare("SELECT serial FROM openid_sigs WHERE assoc_handle = ? AND nonce = ? AND signed = ? AND signature = ? AND identity = ? AND stat = 'A'");
+    $sth
+        = $main::dbh->prepare(
+        "SELECT serial FROM openid_sigs WHERE assoc_handle = ? AND nonce = ? AND signed = ? AND signature = ? AND identity = ? AND stat = 'A'"
+        );
 
-    if ((!$sth) ||
-        (!$sth->execute($assoc_handle,
-                        $nonce,
-                        $signed,
-                        $signature,
-                        $identity)))
+    if (( !$sth )
+        || (!$sth->execute(
+                $assoc_handle, $nonce, $signed, $signature, $identity
+            )
+        )
+        )
     {
         return 0;
     }
 
     # There should be a single matching row
-    if ($sth->rows == 1)
-    {
+    if ( $sth->rows == 1 ) {
         $result = 1;
         ($serial) = $sth->fetchrow_array;
 
         # Mark the signature entry as verified to prevent replay attacks
-        $main::dbh->do("UPDATE openid_sigs SET stat = 'V' WHERE serial = $serial");
+        $main::dbh->do(
+            "UPDATE openid_sigs SET stat = 'V' WHERE serial = $serial");
     }
-    else
-    {
+    else {
         $result = 0;
     }
 
@@ -200,26 +194,25 @@ sub VerifySignature
 #
 # This function is replaced by our NCSU version.
 #
-sub ValidSHAPassword
-{
-    my ($username, $password) = @_;
+sub ValidSHAPassword {
+    my ( $username, $password ) = @_;
 
-    my ($sth,
-        $serial);
+    my ( $sth, $serial );
 
     # Hash the provided password
     $password = sha1_hex($password);
 
     # Try to find a matching row
-    $sth = $main::dbh->prepare("SELECT serial FROM openid_users WHERE username = ? AND password = ?");
-    if (($sth) &&
-        ($sth->execute($username, $password)))
+    $sth
+        = $main::dbh->prepare(
+        "SELECT serial FROM openid_users WHERE username = ? AND password = ?"
+        );
+    if (   ($sth)
+        && ( $sth->execute( $username, $password ) ) )
     {
-        if ($sth->rows == 1)
-        {
+        if ( $sth->rows == 1 ) {
             ($serial) = $sth->fetchrow_array;
-            if ($serial > 0)
-            {
+            if ( $serial > 0 ) {
                 return $serial;
             }
         }
@@ -228,32 +221,28 @@ sub ValidSHAPassword
     return 0;
 }
 
-sub ValidPassword
-{
-    my ($username, $password) = @_;
+sub ValidPassword {
+    my ( $username, $password ) = @_;
 
-    my ($sth,
-        $serial);
+    my ( $sth, $serial );
 
     # Check the userid and password via NCSUaklib
     my $error = krb5_login( $username, $password );
     krb5_destroy();
 
-    if ($error ne 'OK')
-    {
+    if ( $error ne 'OK' ) {
         return 0;
     }
 
     # Try to find a matching row
-    $sth = $main::dbh->prepare("SELECT serial FROM openid_users WHERE username = ?");
-    if (($sth) &&
-        ($sth->execute($username)))
+    $sth = $main::dbh->prepare(
+        "SELECT serial FROM openid_users WHERE username = ?");
+    if (   ($sth)
+        && ( $sth->execute($username) ) )
     {
-        if ($sth->rows == 1)
-        {
+        if ( $sth->rows == 1 ) {
             ($serial) = $sth->fetchrow_array;
-            if ($serial > 0)
-            {
+            if ( $serial > 0 ) {
                 return $serial;
             }
         }
@@ -264,55 +253,55 @@ sub ValidPassword
 
 #
 # GetUserKey
-# 
+#
 # This routine will get or set the key in the user table, also updating the
 # expiration date.
 #
-sub GetUserKey
-{
+sub GetUserKey {
     my (%request) = @_;
 
-    my ($sth,
-        $user_key,
-        $user_key_expires,
-        $serial,
-        $current_time,
-        $expires);
+    my ( $sth, $user_key, $user_key_expires, $serial, $current_time,
+        $expires );
 
-    $sth = $main::dbh->prepare("SELECT serial, user_key, key_expires FROM openid_users WHERE username = ?");
-    if ($sth)
-    {
-        $sth->execute($request{'identity'});
-        ($serial, $user_key, $user_key_expires) = $sth->fetchrow_array;
+    $sth
+        = $main::dbh->prepare(
+        "SELECT serial, user_key, key_expires FROM openid_users WHERE username = ?"
+        );
+    if ($sth) {
+        $sth->execute( $request{'identity'} );
+        ( $serial, $user_key, $user_key_expires ) = $sth->fetchrow_array;
         $sth->finish;
     }
 
     # The rest we can do only if we have a valid serial key
-    if ($serial > 0)
-    {
+    if ( $serial > 0 ) {
         $current_time = time();
-        $expires = $current_time + $main::openid_cookie_expiration;
+        $expires      = $current_time + $main::openid_cookie_expiration;
 
-        if (($user_key_expires > 0) &&
-            ($user_key_expires > $current_time) &&
-            (length($user_key) > 0) &&
-            ($request{'openid_user_key'} eq $user_key))
+        if (   ( $user_key_expires > 0 )
+            && ( $user_key_expires > $current_time )
+            && ( length($user_key) > 0 )
+            && ( $request{'openid_user_key'} eq $user_key ) )
         {
+
             # Update the expiration timestamp
-            $sth = $main::dbh->prepare("UPDATE openid_users SET key_expires = ? WHERE serial = ?");
-            $sth->execute($expires, $serial);
+            $sth = $main::dbh->prepare(
+                "UPDATE openid_users SET key_expires = ? WHERE serial = ?");
+            $sth->execute( $expires, $serial );
         }
-        else
-        {
+        else {
+
             # Get a new user key value
             $user_key = GetNonce();
-            for(my $i=0; $i<100; $i++)
-            {
-                $user_key .= int(rand(4294967296));
+            for ( my $i = 0; $i < 100; $i++ ) {
+                $user_key .= int( rand(4294967296) );
             }
             $user_key = sha1_hex($user_key);
-            $sth = $main::dbh->prepare("UPDATE openid_users SET user_key = ?, key_expires = ? WHERE serial = ?");
-            $sth->execute($user_key, $expires, $serial);
+            $sth
+                = $main::dbh->prepare(
+                "UPDATE openid_users SET user_key = ?, key_expires = ? WHERE serial = ?"
+                );
+            $sth->execute( $user_key, $expires, $serial );
         }
     }
 
@@ -321,37 +310,34 @@ sub GetUserKey
 
 #
 # DeleteUserKey
-# 
+#
 # This routine will delete the key in the user table
 #
-sub DeleteUserKey
-{
+sub DeleteUserKey {
     my (%request) = @_;
 
-    my ($sth,
-        $user_key,
-        $user_key_expires,
-        $serial,
-        $current_time,
-        $expires);
+    my ( $sth, $user_key, $user_key_expires, $serial, $current_time,
+        $expires );
 
-    $sth = $main::dbh->prepare("SELECT serial FROM openid_users WHERE username = ?");
-    if ($sth)
-    {
-        $sth->execute($request{'identity'});
+    $sth = $main::dbh->prepare(
+        "SELECT serial FROM openid_users WHERE username = ?");
+    if ($sth) {
+        $sth->execute( $request{'identity'} );
         ($serial) = $sth->fetchrow_array;
         $sth->finish;
     }
 
     # The rest we can do only if we have a valid serial key
-    if ($serial > 0)
-    {
+    if ( $serial > 0 ) {
+
         # Update the expiration timestamp
-        $sth = $main::dbh->prepare("UPDATE openid_users SET user_key = \"\", key_expires = 0 WHERE serial = ?");
+        $sth
+            = $main::dbh->prepare(
+            "UPDATE openid_users SET user_key = \"\", key_expires = 0 WHERE serial = ?"
+            );
         $sth->execute($serial);
     }
 }
-
 
 #
 # RecognizedUser
@@ -359,28 +345,26 @@ sub DeleteUserKey
 # This routine will return a 1 if the user is recognized or 0 if the
 # user is not recognized.  By "recognized", we mean that we know that
 # the user has a valid association with the requesting entity.
-# 
-sub RecognizedUser
-{
+#
+sub RecognizedUser {
     my (%request) = @_;
 
-    my ($sth,
-        $user_key,
-        $serial,
-        $current_time);
+    my ( $sth, $user_key, $serial, $current_time );
 
-    # If it appears that we recognize the user, then grab the user key from the
-    # database and compare that to what we received from the browser.
-    if ((length($request{'identity'}) > 0) &&
-        (length($request{'openid_user_key'}) > 0))
+   # If it appears that we recognize the user, then grab the user key from the
+   # database and compare that to what we received from the browser.
+    if (   ( length( $request{'identity'} ) > 0 )
+        && ( length( $request{'openid_user_key'} ) > 0 ) )
     {
-        $sth = $main::dbh->prepare("SELECT serial, user_key FROM openid_users WHERE username = ? AND key_expires > ?");
+        $sth
+            = $main::dbh->prepare(
+            "SELECT serial, user_key FROM openid_users WHERE username = ? AND key_expires > ?"
+            );
         $current_time = time();
-        $sth->execute($request{'identity'},$current_time);
-        ($serial, $user_key) = $sth->fetchrow_array;
+        $sth->execute( $request{'identity'}, $current_time );
+        ( $serial, $user_key ) = $sth->fetchrow_array;
         $sth->finish;
-        if ($request{"openid_user_key"} eq $user_key)
-        {
+        if ( $request{"openid_user_key"} eq $user_key ) {
             return 1;
         }
     }
@@ -393,23 +377,19 @@ sub RecognizedUser
 #
 # Perform necessary signaling to indicate that a setup is needed.
 #
-sub SignalSetupNeeded
-{
+sub SignalSetupNeeded {
     my (%request) = @_;
-    my ($openid_ns,
-        $setup_url,
-        $location);
+    my ( $openid_ns, $setup_url, $location );
 
     $location = URI->new( $request{'return_to'} );
-    $location->query_param('openid.ns' => $main::openid_ns);
+    $location->query_param( 'openid.ns' => $main::openid_ns );
 
-    if ($request{'ns'} eq $main::openid_ns_1_1)
-    {
+    if ( $request{'ns'} eq $main::openid_ns_1_1 ) {
         $location->query_param( 'openid.mode' => 'id_res' );
-        $location->query_param( 'openid.user_setup_url' => $main::openid_setup_url );
+        $location->query_param(
+            'openid.user_setup_url' => $main::openid_setup_url );
     }
-    else
-    {
+    else {
         $location->query_param( 'openid.mode' => 'setup_needed' );
     }
 
@@ -423,12 +403,11 @@ sub SignalSetupNeeded
 # Make the given string safe for display in an HTML document.  The string
 # must be passed by reference.
 #
-sub MakeHTMLSafe
-{
+sub MakeHTMLSafe {
     my ($text_line) = @_;
 
     # calls HTML::Entities
-    encode_entities( $$text_line );
+    encode_entities($$text_line);
 }
 
 #
@@ -437,84 +416,81 @@ sub MakeHTMLSafe
 # This routine will get the user information from the database.
 # It will return a HTTP status code indicating the result.
 #
-sub GetUser
-{
+sub GetUser {
     my ($username) = @_;
 
-    my ($sth,
-        $name,
-        $homepage);
+    my ( $sth, $name, $homepage );
 
-    $sth = $main::dbh->prepare("SELECT name, homepage FROM openid_users WHERE username = ?");
-    if (!$sth)
-    {
-        return (500, "", "");
+    $sth = $main::dbh->prepare(
+        "SELECT name, homepage FROM openid_users WHERE username = ?");
+    if ( !$sth ) {
+        return ( 500, "", "" );
     }
 
-    if (!$sth->execute($username) || ($sth->rows != 1))
-    {
+    if ( !$sth->execute($username) || ( $sth->rows != 1 ) ) {
+
         # Finish the failed SQL statement
         $sth->finish;
 
         # if the user does not exist, try to import them from UserInfo
         my $ui = SysNews::UserInfo->new($username);
-        if (!defined $ui->{username}) 
-        {
-            return (404, "", "");
+        if ( !defined $ui->{username} ) {
+            return ( 404, "", "" );
         }
 
         $username = $ui->{username};
-        $name = $ui->{fullname};
+        $name     = $ui->{fullname};
         $homepage = undef;
         my $pass = 'ncsu';
 
-        $sth = $main::dbh->prepare("INSERT INTO openid_users (username, password, name, homepage) VALUES (?, ?, ?, ?)");
-        if (!$sth)
-        {
-            return (500, "", "");
+        $sth
+            = $main::dbh->prepare(
+            "INSERT INTO openid_users (username, password, name, homepage) VALUES (?, ?, ?, ?)"
+            );
+        if ( !$sth ) {
+            return ( 500, "", "" );
         }
 
-        if (!$sth->execute($username, $pass, $name, $homepage))
-        {
-            return (500, "", "");
+        if ( !$sth->execute( $username, $pass, $name, $homepage ) ) {
+            return ( 500, "", "" );
         }
 
         # Finish the SQL statement
         $sth->finish;
 
-        return (200, $name, $homepage);
+        return ( 200, $name, $homepage );
     }
 
     # user does exist, process normally
-    ($name, $homepage) = $sth->fetchrow_array;
+    ( $name, $homepage ) = $sth->fetchrow_array;
 
     # Finish the SQL statement
     $sth->finish;
 
-    return (200, $name, $homepage);
+    return ( 200, $name, $homepage );
 }
 
 #
 # ShowNotFoundPage
 #
-sub ShowNotFoundPage
-{
-    my ($request_uri) = uri_unescape($ENV{'REQUEST_URI'});
+sub ShowNotFoundPage {
+    my ($request_uri) = uri_unescape( $ENV{'REQUEST_URI'} );
 
-    MakeHTMLSafe(\$request_uri);
+    MakeHTMLSafe( \$request_uri );
 
     print "Status: 404 Not Found\r\n";
     print "Content-Type: text/html; charset=UTF-8\r\n";
     print "\r\n";
 
-
-    if (!open(TEMPLATE, "<:encoding(UTF-8)", "$main::openid_not_found_template"))
+    if (!open( TEMPLATE, "<:encoding(UTF-8)",
+            "$main::openid_not_found_template"
+        )
+        )
     {
         return;
     }
 
-    while(<TEMPLATE>)
-    {
+    while (<TEMPLATE>) {
         s/<!--#echo var="REQUEST_URI" -->/$request_uri/;
         print;
     }
