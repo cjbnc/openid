@@ -139,11 +139,11 @@ HEREDOC
 
     # untaint username before using it
     $username =~ s{[^\w\-]}{}g;
-    $username = substr($username,0,20) if (length($username > 20);
+    $username = substr($username,0,20) if (length($username) > 20);
 
     # untaint openid_user before using it
     $openid_user =~ s{[^\w\-]}{}g;
-    $openid_user = substr($openid_user,0,20) if (length($openid_user > 20);
+    $openid_user = substr($openid_user,0,20) if (length($openid_user) > 20);
 
     if (!DatabaseConnect())
     {

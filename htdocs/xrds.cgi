@@ -100,7 +100,7 @@ HERE_DOC
 
     # untaint username before using it
     $username =~ s{[^\w\-]}{}g;
-    $username = substr($username,0,20) if (length($username > 20);
+    $username = substr($username,0,20) if (length($username) > 20);
 
     if (!DatabaseConnect())
     {
