@@ -25,6 +25,8 @@ $main::openid_insecure_cookie_domain = ".packetizer.com";
 $main::openid_secure_cookie_domain   = "openid.packetizer.com";
 $main::openid_cookie_expiration = 2592000;    # Seconds until expiration
 
+$main::openid_log_dir = "/var/log/httpd";     # writable by the webserver
+
 # Globals (may be modified)
 # If not using TLS for key exchange when creating an association, disallow
 # no-encryption as per the OpenID spec
