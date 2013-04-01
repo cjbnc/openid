@@ -469,7 +469,8 @@ sub GetUser
         my $ui = SysNews::UserInfo->new($username);
         if (!defined $ui->{username}) 
         {
-            return (404, "", "");
+            # even though they don't exist, don't expose that info 
+            return (200, $username, "");
         }
 
         $username = $ui->{username};
@@ -491,7 +492,7 @@ sub GetUser
         # Finish the SQL statement
         $sth->finish;
 
-        return (200, $name, $homepage);
+        return (200, $username, $homepage);
     }
 
     # user does exist, process normally
@@ -500,7 +501,7 @@ sub GetUser
     # Finish the SQL statement
     $sth->finish;
 
-    return (200, $name, $homepage);
+    return (200, $username, $homepage);
 }
 
 #
