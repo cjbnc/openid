@@ -9,6 +9,7 @@ use strict;
 
 use NCSUaklib qw(krb5_login krb5_destroy);
 use SysNews::UserInfo;
+use HTML::Entities qw(decode_entities encode_entities);
 use URI::Escape;
 
 #
@@ -434,10 +435,8 @@ sub MakeHTMLSafe
 {
     my ($text_line) = @_;
 
-    $$text_line =~ s/&/&amp;/g;
-    $$text_line =~ s/</&lt;/g;
-    $$text_line =~ s/>/&gt;/g;
-    $$text_line =~ s/"/&quot;/g;
+    # calls HTML::Entities
+    $$text_line = encode_entities( $$text_line );
 }
 
 #
