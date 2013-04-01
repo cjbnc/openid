@@ -761,6 +761,17 @@ sub HandleCheckAuthentication {
     $request{'invalidate_handle'} = $query->param('openid.invalidate_handle');
     $request{'packetizer.message'} = $query->param('packetizer.message');
 
+    # untaint passed identities
+    foreach my $var (qw( claimed_id openid_user identity )) {
+
+        # must be simple URLs or usernames, like these
+        #     https://openid.ncsu.edu/unityid2
+        #     http://specs.openid.net/auth/2.0/identifier_select
+        #     unityid2
+        # so just clean out all unexpected chars
+        $request{ $var } =~ s{[^\w\-.:/]}{}ig;
+    }
+
     # Since 1.1 implementations do not provide 'ns', we'll assume
     # that a missing ns indicates a 1.1 Relying Party
     if ( length( $request{'ns'} ) == 0 ) {

@@ -164,6 +164,17 @@ sub LogoffRequest {
         $request{"$_"} = $query->param("$_");
     }
 
+    # untaint passed identities
+    foreach my $var (qw( identity )) {
+
+        # must be simple URLs or usernames, like these
+        #     https://openid.ncsu.edu/unityid2
+        #     http://specs.openid.net/auth/2.0/identifier_select
+        #     unityid2
+        # so just clean out all unexpected chars
+        $request{ $var } =~ s{[^\w\-.:/]}{}ig;
+    }
+
     # Grab the OpenID secure cookie
     $request{'openid_user_key'} = $query->cookie('openid_user_key');
 
