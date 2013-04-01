@@ -10,7 +10,9 @@ use strict;
 use NCSUaklib qw(krb5_login krb5_destroy);
 use SysNews::UserInfo;
 use HTML::Entities qw(decode_entities encode_entities);
+use URI;
 use URI::Escape;
+use URI::QueryParam;
 
 #
 # CreateAssociation
@@ -398,27 +400,17 @@ sub SignalSetupNeeded
         $setup_url,
         $location);
 
-    $openid_ns = uri_escape($main::openid_ns);
-    $setup_url = uri_escape($main::openid_setup_url);
-
-    # Are there parameters in the URL?
-    if ($request{'return_to'} =~ /\?/)
-    {
-        $location = $request{'return_to'} . "&";
-    }
-    else
-    {
-        $location = $request{'return_to'} . "?";
-    }
+    $location = URI->new( $request{'return_to'} );
+    $location->query_param('openid.ns' => $main::openid_ns);
 
     if ($request{'ns'} eq $main::openid_ns_1_1)
     {
-        $location .= "openid.ns=$openid_ns&openid.mode=id_res";
-        $location .= "&openid.user_setup_url=$setup_url";
+        $location->query_param( 'openid.mode' => 'id_res' );
+        $location->query_param( 'openid.user_setup_url' => $main::openid_setup_url );
     }
     else
     {
-        $location .= "openid.ns=$openid_ns&openid.mode=setup_needed";
+        $location->query_param( 'openid.mode' => 'setup_needed' );
     }
 
     print "Location: $location\r\n";
