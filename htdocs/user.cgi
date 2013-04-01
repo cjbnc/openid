@@ -4,8 +4,8 @@
 # Copyright (C) 2009, 2010
 # Packetizer, Inc.
 #
-# This script will generate an HTML page representing the user or return
-# a 404 if the user id is not found.
+# This script will generate an HTML page representing the user.
+# It will NOT return a 404 if the user id is not found.
 #
 
 use strict;
@@ -33,6 +33,16 @@ sub ProcessIdentityRequest
         $return_to);
 
     ($status, $name, $homepage) = GetUser($username);
+
+    # do not expose invalid usernames to the web
+    if ($status == 404 && length($username) > 2)
+    {
+        $status = 200;
+        $homepage = "";
+    }
+
+    # do not expose private name info to the web
+    $name = $username;
 
     if ($status == 404)
     {
@@ -126,6 +136,14 @@ HEREDOC
 
     $username = $query->param('username');
     $openid_user = $query->cookie('openid_user');
+
+    # untaint username before using it
+    $username =~ s{[^\w\-]}{}g;
+    $username = substr($username,0,20) if (length($username > 20);
+
+    # untaint openid_user before using it
+    $openid_user =~ s{[^\w\-]}{}g;
+    $openid_user = substr($openid_user,0,20) if (length($openid_user > 20);
 
     if (!DatabaseConnect())
     {

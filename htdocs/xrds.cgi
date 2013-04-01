@@ -31,6 +31,16 @@ sub ProcessXRDSRequest
 
     ($status, $name, $homepage) = GetUser($username);
 
+    # do not expose invalid usernames to the web
+    if ($status == 404 && length($username) > 2)
+    {
+        $status = 200;
+        $homepage = "";
+    }
+
+    # do not expose private name info to the web
+    $name = $username;
+
     if ($status == 404)
     {
         if (length($main::openid_not_found_template) > 0)
@@ -87,6 +97,10 @@ HERE_DOC
     $query = new CGI;
 
     $username = $query->param('username');
+
+    # untaint username before using it
+    $username =~ s{[^\w\-]}{}g;
+    $username = substr($username,0,20) if (length($username > 20);
 
     if (!DatabaseConnect())
     {
