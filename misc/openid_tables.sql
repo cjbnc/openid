@@ -60,3 +60,20 @@ CREATE TABLE `nonce` (
   PRIMARY KEY  (`serial`)
 ) ENGINE=MyISAM AUTO_INCREMENT=1 DEFAULT CHARSET=utf8 COLLATE=utf8_bin;
 
+--
+-- Table structure for table `openid_logs`
+--
+
+DROP TABLE IF EXISTS `openid_logs`;
+CREATE TABLE `openid_logs` (
+  `date` datetime default NULL,
+  `host` varchar(14) default NULL,
+  `ip` varchar(16) default NULL,
+  `user` varchar(30) default NULL,
+  `event` varchar(12) default NULL,
+  `details` varchar(120) default NULL,
+  KEY `user` (`user`),
+  KEY `ip` (`ip`),
+  KEY `date` (`date`)
+) ENGINE=MyISAM DEFAULT CHARSET=utf8;
+
