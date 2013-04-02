@@ -9,19 +9,19 @@ use strict;
 
 # Globals (should be modified)
 $main::openid_site_name  = "NC State Unity";
-$main::op_endpoint       = "https://mosa.unity.ncsu.edu/openid/login/";
-$main::contact           = "https://mosa.unity.ncsu.edu/openid/contact.html";
-$main::process_login     = "https://mosa.unity.ncsu.edu/openid/checkid/";
-$main::openid_url_prefix = "https://mosa.unity.ncsu.edu/openid/";
+$main::op_endpoint       = "https://webauth.ncsu.edu/openid/login/";
+$main::contact           = "https://webauth.ncsu.edu/openid/contact.html";
+$main::process_login     = "https://webauth.ncsu.edu/openid/checkid/";
+$main::openid_url_prefix = "https://webauth.ncsu.edu/openid/";
 $main::openid_setup_url = $main::openid_url_prefix;  # Used only in OpenID 1.1
-$main::openid_xrds_url_prefix = "https://mosa.unity.ncsu.edu/openid/xrds/";
+$main::openid_xrds_url_prefix = "https://webauth.ncsu.edu/openid/xrds/";
 $main::openid_identity_template
-    = "/local/apache22/openid/templates/identity_template.html";
-$main::openid_not_found_template = "/local/apache22/openid/htdocs/404.shtml";
+    = "/local/openid/templates/identity_template.html";
+$main::openid_not_found_template = "/local/openid/htdocs/404.shtml";
 $main::openid_login_template
-    = "/local/apache22/openid/templates/login_template.html";
+    = "/local/openid/templates/login_template.html";
 $main::openid_insecure_cookie_domain = ".ncsu.edu";
-$main::openid_secure_cookie_domain   = "mosa.unity.ncsu.edu";
+$main::openid_secure_cookie_domain   = "webauth.ncsu.edu";
 $main::openid_cookie_expiration = 518400;    # Seconds until expiration
 
 $main::openid_log_dir = "/local/apache22/logs"; # writable by the webserver
