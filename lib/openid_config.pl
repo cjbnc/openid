@@ -8,7 +8,7 @@
 use strict;
 
 # Globals (should be modified)
-$main::openid_site_name  = "MOSA";
+$main::openid_site_name  = "NC State Unity";
 $main::op_endpoint       = "https://mosa.unity.ncsu.edu/openid/login/";
 $main::contact           = "https://mosa.unity.ncsu.edu/openid/contact.html";
 $main::process_login     = "https://mosa.unity.ncsu.edu/openid/checkid/";
