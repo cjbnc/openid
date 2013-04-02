@@ -24,7 +24,7 @@ $main::openid_insecure_cookie_domain = ".ncsu.edu";
 $main::openid_secure_cookie_domain   = "webauth.ncsu.edu";
 $main::openid_cookie_expiration = 518400;    # Seconds until expiration
 
-$main::openid_log_dir = "/local/apache22/logs"; # writable by the webserver
+$main::openid_log_dir = "/local/openid/logs"; # writable by the webserver
 
 # Globals (may be modified)
 # If not using TLS for key exchange when creating an association, disallow
