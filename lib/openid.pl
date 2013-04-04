@@ -374,17 +374,27 @@ sub RecognizedUser {
 
         if ( $request{"openid_user_key"} eq $user_key ) {
             LogEvent(
-                'user'    => $request{'identity'},
-                'event'   => 'cookie-ok',
-                'details' => $logurl->as_string,
+                'user'       => $request{'identity'},
+                'event'      => 'cookielogin',
+                'action'     => 'success',
+                'result'     => 'OK',
+                'reason'     => 'saved cookie match',
+                'return_url' => $logurl->as_string,
             );
             return 1;
         }
         else {
             LogEvent(
-                'user'    => $request{'identity'},
-                'event'   => 'cookie-fail',
-                'details' => $logurl->as_string,
+                'user'   => $request{'identity'},
+                'event'  => 'cookielogin',
+                'action' => 'fail',
+                'result' => 'FAIL',
+                'reason' => (
+                    length($user_key)
+                    ? 'saved cookie mismatch'
+                    : 'saved cookie not found'
+                ),
+                'return_url' => $logurl->as_string,
             );
         }
     }
@@ -547,7 +557,7 @@ sub LogEvent {
     # log to database, quietly skip on failures
     my $sth
         = $main::dbh->prepare(
-              "INSERT INTO openid_logs (date, host, ip, user, event, details) "
+        "INSERT INTO openid_logs (date, host, ip, user, event, details) "
             . "VALUES (?, ?, ?, ?, ?, ?)" );
     if ($sth) {
         $sth->execute(

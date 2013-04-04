@@ -39,12 +39,14 @@ sub ProcessIdentityRequest {
     $name = $username;
 
     LogEvent(
-        'user'    => $username,
-        'event'   => 'userinfo',
-        'details' => (
-              $status == 200 ? '200 OK'
-            : $status == 404 ? '404 Not Found'
-            : "$status Error"
+        'user'   => $username,
+        'event'  => 'userinfo',
+        'action' => ( $status == 200 ? 'success' : 'fail' ),
+        'result' => $status,
+        'reason' => (
+              $status == 200 ? 'OK'
+            : $status == 404 ? 'Not Found'
+            : "Server Error"
         ),
     );
 
