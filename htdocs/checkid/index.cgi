@@ -113,6 +113,9 @@ sub CancelRequest {
     LogEvent(
         'user'    => $request{identity},
         'event'   => 'cancel',
+        'action'  => 'success',
+        'result'  => 'OK',
+        'reason'  => 'login cancelled',
         'details' => $logurl->as_string
     );
 
