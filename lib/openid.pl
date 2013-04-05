@@ -229,11 +229,17 @@ sub ValidPassword {
 
     my ( $sth, $serial );
 
+    if (length($password) < 1) {
+        $main::log_reasons .= 'no password, ';
+        return 0;
+    }
+
     # Check the userid and password via NCSUaklib
     my $error = krb5_login( $username, $password );
     krb5_destroy();
 
     if ( $error ne 'OK' ) {
+        $main::log_reasons .= 'userid/pass failed, ';
         return 0;
     }
 
@@ -246,11 +252,13 @@ sub ValidPassword {
         if ( $sth->rows == 1 ) {
             ($serial) = $sth->fetchrow_array;
             if ( $serial > 0 ) {
+                $main::log_reasons .= 'userid/pass success, ';
                 return $serial;
             }
         }
     }
 
+    $main::log_reasons .= 'user unknown, ';
     return 0;
 }
 
@@ -373,27 +381,29 @@ sub RecognizedUser {
         $logurl->query_form( {} );
 
         if ( $request{"openid_user_key"} eq $user_key ) {
+            $main::log_reasons .= 'cookie match, ';
             LogEvent(
                 'user'       => $request{'identity'},
                 'event'      => 'cookielogin',
                 'action'     => 'success',
                 'result'     => 'OK',
-                'reason'     => 'saved cookie match',
+                'reason'     => $main::log_reasons,
                 'return_url' => $logurl->as_string,
             );
             return 1;
         }
         else {
+            $main::log_reasons .= (
+                length($user_key)
+                ? 'cookie mismatch, '
+                : 'cookie not found, '
+            );
             LogEvent(
                 'user'   => $request{'identity'},
                 'event'  => 'cookielogin',
                 'action' => 'fail',
                 'result' => 'FAIL',
-                'reason' => (
-                    length($user_key)
-                    ? 'saved cookie mismatch'
-                    : 'saved cookie not found'
-                ),
+                'reason'     => $main::log_reasons,
                 'return_url' => $logurl->as_string,
             );
         }
@@ -549,10 +559,7 @@ sub LogEvent {
     $data{host} = hostname();
     $data{host} =~ s{\..*\z}{};
 
-    # default values
-    foreach my $key (qw( user event details)) {
-        $data{$key} = '-' if ( !$data{$key} );
-    }
+    $data{reason} =~ s{,\s+\z}{};   # clean up list
 
     # log to database, quietly skip on failures
     my $sth
@@ -569,24 +576,25 @@ sub LogEvent {
     my $filepath = $main::openid_log_dir . '/openid_log.' . $filedate;
     my $logline  = "$data{date} src_ip=$data{ip}";
     foreach my $field (qw( host user event action result reason return_url)) {
-        my $val = DoubleQuote($data{$field});
+        my $val = DoubleQuote( $data{$field} );
         $logline .= " $field=$val";
     }
     if ( open( my $out, '>>', $filepath ) ) {
-        print $out $logline,"\n";
+        print $out $logline, "\n";
         close($out);
     }
 }
+
 #
 # DoubleQuote
 #   - returns a doublequote-enclosed string for Splunk logs
 #
 sub DoubleQuote {
     my $str = shift;
-    return qq{""} if (!$str);
+    return qq{""} if ( !$str );
 
-    $str =~ s{\\}{\\\\}g; # escape backslash
-    $str =~ s{"}{\\"}g;   # escape internal quotes
+    $str =~ s{\\}{\\\\}g;    # escape backslash
+    $str =~ s{"}{\\"}g;      # escape internal quotes
     return qq{"$str"};
 }
 

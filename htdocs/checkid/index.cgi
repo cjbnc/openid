@@ -115,7 +115,7 @@ sub CancelRequest {
         'event'      => 'cancel',
         'action'     => 'success',
         'result'     => 'OK',
-        'reason'     => 'login cancelled',
+        'reason'     => 'cancel requested',
         'return_url' => $logurl->as_string
     );
 
@@ -145,7 +145,7 @@ sub LogoffRequest {
         'event'      => 'logoff',
         'action'     => 'success',
         'result'     => 'OK',
-        'reason'     => 'logged off',
+        'reason'     => 'logoff requested',
         'return_url' => $logurl->as_string
     );
 
@@ -179,6 +179,8 @@ sub LogoffRequest {
     # Ensure that all output is proper UTF-8
     binmode( STDOUT, ":encoding(UTF-8)" );
 
+    # capture reasons for logging
+    $main::log_reasons = "";
     $query = new CGI;
 
     # Grab all of the parameters
@@ -254,7 +256,7 @@ sub LogoffRequest {
             'event'      => 'login',
             'action'     => 'fail',
             'result'     => 'FAIL',
-            'reason'     => 'userid/password check failed',
+            'reason'     => $main::log_reasons,
             'return_url' => $logurl->as_string
         );
 
@@ -305,7 +307,7 @@ sub LogoffRequest {
                 'event'      => 'login',
                 'action'     => 'success',
                 'result'     => 'OK',
-                'reason'     => 'login by userid/password',
+                'reason'     => $main::log_reasons,
                 'return_url' => $logurl->as_string
             );
 
