@@ -111,12 +111,12 @@ sub CancelRequest {
     my $logurl = $location->clone;
     $logurl->query_form( {} );
     LogEvent(
-        'user'    => $request{identity},
-        'event'   => 'cancel',
-        'action'  => 'success',
-        'result'  => 'OK',
-        'reason'  => 'login cancelled',
-        'details' => $logurl->as_string
+        'user'       => $request{identity},
+        'event'      => 'cancel',
+        'action'     => 'success',
+        'result'     => 'OK',
+        'reason'     => 'login cancelled',
+        'return_url' => $logurl->as_string
     );
 
     print "Location: $location\r\n";
@@ -141,9 +141,12 @@ sub LogoffRequest {
     my $logurl = $location->clone;
     $logurl->query_form( {} );
     LogEvent(
-        'user'    => $request{identity},
-        'event'   => 'logoff',
-        'details' => $logurl->as_string
+        'user'       => $request{identity},
+        'event'      => 'logoff',
+        'action'     => 'success',
+        'result'     => 'OK',
+        'reason'     => 'logged off',
+        'return_url' => $logurl->as_string
     );
 
     # Invalidate the user's credentials to prevent login, setting the
@@ -247,9 +250,12 @@ sub LogoffRequest {
         my $logurl = URI->new( $request{'return_to'} );
         $logurl->query_form( {} );
         LogEvent(
-            'user'    => $request{'identity'},
-            'event'   => 'login-fail',
-            'details' => $logurl->as_string,
+            'user'       => $request{'identity'},
+            'event'      => 'login',
+            'action'     => 'fail',
+            'result'     => 'FAIL',
+            'reason'     => 'userid/password check failed',
+            'return_url' => $logurl->as_string
         );
 
         if ( $request{'mode'} eq "checkid_immediate" ) {
@@ -295,9 +301,12 @@ sub LogoffRequest {
             my $logurl = URI->new( $request{'return_to'} );
             $logurl->query_form( {} );
             LogEvent(
-                'user'    => $request{'identity'},
-                'event'   => 'login-ok',
-                'details' => $logurl->as_string,
+                'user'       => $request{'identity'},
+                'event'      => 'login',
+                'action'     => 'success',
+                'result'     => 'OK',
+                'reason'     => 'login by userid/password',
+                'return_url' => $logurl->as_string
             );
 
             #
