@@ -229,7 +229,7 @@ sub ValidPassword {
 
     my ( $sth, $serial );
 
-    if (length($password) < 1) {
+    if ( length($password) < 1 ) {
         $main::log_reasons .= 'no password, ';
         return 0;
     }
@@ -384,7 +384,7 @@ sub RecognizedUser {
             $main::log_reasons .= 'cookie match, ';
             LogEvent(
                 'user'       => $request{'identity'},
-                'event'      => 'cookielogin',
+                'event'      => 'cookieauth',
                 'action'     => 'success',
                 'result'     => 'OK',
                 'reason'     => $main::log_reasons,
@@ -399,10 +399,10 @@ sub RecognizedUser {
                 : 'cookie not found, '
             );
             LogEvent(
-                'user'   => $request{'identity'},
-                'event'  => 'cookielogin',
-                'action' => 'fail',
-                'result' => 'FAIL',
+                'user'       => $request{'identity'},
+                'event'      => 'cookieauth',
+                'action'     => 'fail',
+                'result'     => 'FAIL',
                 'reason'     => $main::log_reasons,
                 'return_url' => $logurl->as_string,
             );
@@ -559,7 +559,7 @@ sub LogEvent {
     $data{host} = hostname();
     $data{host} =~ s{\..*\z}{};
 
-    $data{reason} =~ s{,\s+\z}{};   # clean up list
+    $data{reason} =~ s{,\s+\z}{};    # clean up list
 
     # log to database, quietly skip on failures
     my $sth
@@ -574,8 +574,8 @@ sub LogEvent {
 
     # also log to flat file
     my $filepath = $main::openid_log_dir . '/openid_log.' . $filedate;
-    my $logline  = "$data{date} src_ip=$data{ip}";
-    foreach my $field (qw( host user event action result reason return_url)) {
+    my $logline  = "$data{date} - src_ip=$data{ip}";
+    foreach my $field (qw( user event action result reason return_url)) {
         my $val = DoubleQuote( $data{$field} );
         $logline .= " $field=$val";
     }
