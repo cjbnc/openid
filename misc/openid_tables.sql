@@ -71,7 +71,9 @@ CREATE TABLE `openid_logs` (
   `ip` varchar(16) default NULL,
   `user` varchar(30) default NULL,
   `event` varchar(12) default NULL,
-  `details` varchar(120) default NULL,
+  `result` varchar(8) default NULL,
+  `reason` varchar(50) default NULL,
+  `return_url` varchar(120) default NULL,
   KEY `user` (`user`),
   KEY `ip` (`ip`),
   KEY `date` (`date`)

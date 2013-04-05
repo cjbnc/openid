@@ -531,7 +531,7 @@ sub ShowNotFoundPage {
 #
 # LogEvent
 # usage:
-#  LogEvent( user => 'unityid', event => 'keyword', details => 'blah blah' );
+#  LogEvent( user => 'unityid', event => 'keyword', ... );
 #
 sub LogEvent {
     my (%data) = (@_);
@@ -556,23 +556,38 @@ sub LogEvent {
 
     # log to database, quietly skip on failures
     my $sth
-        = $main::dbh->prepare(
-        "INSERT INTO openid_logs (date, host, ip, user, event, details) "
-            . "VALUES (?, ?, ?, ?, ?, ?)" );
+        = $main::dbh->prepare( "INSERT INTO openid_logs "
+            . "(date, host, ip, user, event, result, reason, return_url) "
+            . "VALUES (?, ?, ?, ?, ?, ?, ?, ?)" );
     if ($sth) {
-        $sth->execute(
-            $data{date}, $data{host},  $data{ip},
-            $data{user}, $data{event}, $data{details},
-        );
+        $sth->execute( $data{date}, $data{host}, $data{ip}, $data{user},
+            $data{event}, $data{result}, $data{reason}, $data{return_url} );
         $sth->finish;
     }
 
     # also log to flat file
     my $filepath = $main::openid_log_dir . '/openid_log.' . $filedate;
+    my $logline  = "$data{date} src_ip=$data{ip}";
+    foreach my $field (qw( host user event action result reason return_url)) {
+        my $val = DoubleQuote($data{$field});
+        $logline .= " $field=$val";
+    }
     if ( open( my $out, '>>', $filepath ) ) {
-        printf $out qq{[%s] %s %s "%s" "%s"\n},
-            $data{date}, $data{ip}, $data{user}, $data{event}, $data{details};
+        print $out $logline,"\n";
         close($out);
     }
 }
+#
+# DoubleQuote
+#   - returns a doublequote-enclosed string for Splunk logs
+#
+sub DoubleQuote {
+    my $str = shift;
+    return qq{""} if (!$str);
+
+    $str =~ s{\\}{\\\\}g; # escape backslash
+    $str =~ s{"}{\\"}g;   # escape internal quotes
+    return qq{"$str"};
+}
+
 1;
